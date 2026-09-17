@@ -137,8 +137,22 @@ def audit_prefix_invariance(
 
     result = AuditResult()
     for i, ((name, _fn), out_a, out_b) in enumerate(zip(layers, outs_a, outs_b)):
-        prefix_a, prefix_b = out_a[:-1], out_b[:-1]
-        last_a, last_b = out_a[-1], out_b[-1]
+        out_a_arr = np.asarray(out_a)
+        out_b_arr = np.asarray(out_b)
+        if out_a_arr.shape != out_b_arr.shape:
+            result.verdict = "inconclusive"
+            result.note = (
+                f"layer {i} ('{name}') produced different output shapes between "
+                f"the two forward passes ({out_a_arr.shape} vs {out_b_arr.shape}). "
+                "This audit assumes every layer's output shape is a deterministic "
+                "function of the input shape alone; a data-dependent layer (token "
+                "pruning, early-exit, sparse/MoE routing, dynamic pooling) breaks "
+                "that assumption and cannot be compared position-by-position. "
+                "Only layers before this one were audited."
+            )
+            return result
+        prefix_a, prefix_b = out_a_arr[:-1], out_b_arr[:-1]
+        last_a, last_b = out_a_arr[-1], out_b_arr[-1]
         max_diff_prefix = float(np.max(np.abs(prefix_a - prefix_b))) if prefix_a.size else 0.0
         max_diff_last = float(np.max(np.abs(last_a - last_b))) if np.size(last_a) else 0.0
         leaked = max_diff_prefix > threshold

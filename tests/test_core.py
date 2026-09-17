@@ -51,6 +51,58 @@ class TestAuditPreconditions:
         assert "precondition violated" in result.note
 
 
+class TestAuditLayerOutputShapeMismatch:
+    """A layer whose OUTPUT shape depends on the data (token pruning,
+    early-exit, sparse/MoE routing, dynamic pooling) is a realistic
+    pattern in real sequence models. The precondition check only
+    validates the two *inputs'* shapes match; nothing validated that a
+    layer's output shape stays identical across both forward passes.
+    When it silently doesn't, the raw numpy subtraction two lines later
+    either raises an unhandled ValueError (unequal leading dims) or,
+    worse, silently broadcasts/truncates instead of reporting a clear
+    'inconclusive' precondition violation like every other invalid-input
+    case in this module already does."""
+
+    def test_layer_output_shape_mismatch_is_reported_not_crashed(self):
+        rng = np.random.default_rng(9)
+        x = rng.standard_normal((6, 3))
+        x2 = x.copy()
+        x2[-1] += 5.0
+
+        def data_dependent_layer(a):
+            # Prunes rows above a magnitude threshold -- output row count
+            # depends on the perturbed value, so the two passes' outputs
+            # end up with DIFFERENT leading shapes.
+            mask = np.abs(a[:, 0]) < 3.0
+            return a[mask]
+
+        layers = [("prune", data_dependent_layer)]
+        result = audit_prefix_invariance(layers, x, x2)
+        assert result.verdict == "inconclusive"
+        assert "prune" in result.note
+        assert "shape" in result.note.lower()
+
+    def test_layer_output_shape_mismatch_localizes_to_the_right_layer(self):
+        rng = np.random.default_rng(10)
+        x = rng.standard_normal((6, 3))
+        x2 = x.copy()
+        x2[-1] += 5.0
+
+        def identity(a):
+            return a.copy()
+
+        def shrink(a):
+            return a[: a.shape[0] - int(a[-1, 0] > 0)]
+
+        layers = [("pass0", identity), ("shrink1", shrink)]
+        result = audit_prefix_invariance(layers, x, x2)
+        assert result.verdict == "inconclusive"
+        assert "shrink1" in result.note
+        # layer 0 should still have a valid, non-crashing report
+        assert len(result.layers) == 1
+        assert result.layers[0].name == "pass0"
+
+
 class TestAuditDetection:
     def test_identity_layers_report_clean(self):
         rng = np.random.default_rng(0)

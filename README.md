@@ -44,6 +44,7 @@ Supply ordered `(name, callable)` pairs. Each callable consumes the previous lay
 - Test sequences longer than the relevant chunk/window size; a single chunk can hide cross-chunk leakage.
 - Choose a tolerance appropriate for numerical precision. `epsilon_sweep` helps compare perturbation-dependent leakage with a noise floor; it is a heuristic, not proof.
 - Real model adapters, forward hooks, state resets, and deterministic inference are your responsibility. This project does not validate downloaded checkpoints.
+- Each layer's output shape must be identical across both forward passes. A data-dependent layer (token pruning, early-exit, sparse/MoE routing, dynamic pooling) whose output shape changes with the input is reported as `inconclusive` at that layer, not silently mis-audited or crashed on.
 
 Background: [prefix-invariance paper](https://arxiv.org/abs/2608.22876) and [Transformers #46741](https://github.com/huggingface/transformers/pull/46741).
 
