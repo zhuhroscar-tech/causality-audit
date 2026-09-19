@@ -122,6 +122,17 @@ def audit_prefix_invariance(
         return AuditResult(verdict="inconclusive", note="sequence length must be >= 2 to have a prefix")
 
     prefix_diff_at_input = float(np.max(np.abs(x[:-1] - x_perturbed[:-1])))
+    if math.isnan(prefix_diff_at_input):
+        return AuditResult(
+            verdict="inconclusive",
+            note=(
+                "precondition check produced NaN: x or x_perturbed contains NaN "
+                "on the prefix (positions before the last), so the prefix "
+                "difference cannot be compared against threshold. A NaN "
+                "difference must never be treated as 'no difference' -- fix or "
+                "mask the NaN-producing input before auditing."
+            ),
+        )
     if prefix_diff_at_input > threshold:
         return AuditResult(
             verdict="inconclusive",
@@ -155,6 +166,18 @@ def audit_prefix_invariance(
         last_a, last_b = out_a_arr[-1], out_b_arr[-1]
         max_diff_prefix = float(np.max(np.abs(prefix_a - prefix_b))) if prefix_a.size else 0.0
         max_diff_last = float(np.max(np.abs(last_a - last_b))) if np.size(last_a) else 0.0
+        if math.isnan(max_diff_prefix):
+            result.verdict = "inconclusive"
+            result.note = (
+                f"layer {i} ('{name}') produced NaN when comparing prefix outputs "
+                "between the two forward passes. A NaN difference is neither "
+                "provably clean nor a confirmed numeric leak -- it must be "
+                "reported as inconclusive, never silently treated as 'clean' "
+                "(NaN > threshold is always False, which previously hid this "
+                "case behind the most reassuring verdict). Only layers before "
+                "this one were audited."
+            )
+            return result
         leaked = max_diff_prefix > threshold
         report = LayerReport(
             index=i,

@@ -103,6 +103,59 @@ class TestAuditLayerOutputShapeMismatch:
         assert result.layers[0].name == "pass0"
 
 
+class TestAuditNaNHandling:
+    """A layer that produces NaN in a prefix position (numerical blowup,
+    a real leak that happens to divide-by-zero, masked/padded regions,
+    etc.) must never be silently reported as 'clean'. `np.max(np.abs(diff))`
+    over an array containing NaN returns NaN, and `NaN > threshold` is
+    always False in numpy/Python -- so before this fix, any NaN in a
+    layer's prefix output made `leaked` False and the overall verdict
+    'clean', which is the worst possible failure mode for a leak
+    detector: it actively hides the most suspicious case behind its
+    most reassuring verdict."""
+
+    def test_nan_in_layer_prefix_output_is_not_reported_clean(self):
+        rng = np.random.default_rng(11)
+        x = rng.standard_normal((4, 2))
+        x2 = x.copy()
+        x2[-1] += 1.0
+
+        def nan_injector(a):
+            out = a.copy()
+            out[0, 0] = np.nan  # corrupt a prefix position's output
+            return out
+
+        result = audit_prefix_invariance([("nan_layer", nan_injector)], x, x2)
+        assert result.verdict != "clean"
+        assert result.verdict == "inconclusive"
+        assert "nan" in result.note.lower()
+
+    def test_nan_precondition_violation_is_not_reported_clean(self):
+        # The precondition check itself must also not be fooled by NaN:
+        # x and x_perturbed disagreeing on the prefix via a NaN (instead
+        # of an ordinary numeric difference) must still be caught.
+        x = np.array([[1.0], [2.0], [3.0]])
+        x2 = np.array([[1.0], [np.nan], [4.0]])
+        result = audit_prefix_invariance([("identity", lambda a: a.copy())], x, x2)
+        assert result.verdict == "inconclusive"
+        assert "nan" in result.note.lower()
+
+    def test_to_dict_still_serializable_with_nan_verdict(self):
+        import json
+
+        x = np.zeros((3, 1))
+        x2 = x.copy()
+        x2[-1] += 1.0
+
+        def nan_injector(a):
+            out = a.copy()
+            out[0, 0] = np.nan
+            return out
+
+        result = audit_prefix_invariance([("nan_layer", nan_injector)], x, x2)
+        json.dumps(result.to_dict())  # must not raise
+
+
 class TestAuditDetection:
     def test_identity_layers_report_clean(self):
         rng = np.random.default_rng(0)
