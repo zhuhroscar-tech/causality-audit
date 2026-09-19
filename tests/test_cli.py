@@ -104,3 +104,34 @@ def test_nonpositive_seq_len_is_clean_cli_error_not_crash(capsys, seq_len):
     err = capsys.readouterr().err
     assert "seq-len" in err
     assert "Traceback" not in err
+
+
+@pytest.mark.parametrize("flag,value", [("--seq-len", "abc"), ("--chunk-size", "3.5")])
+def test_non_integer_positive_int_flags_are_clean_cli_error_not_crash(capsys, flag, value):
+    """--seq-len/--chunk-size given a non-integer string (e.g. 'abc' or a
+    float-looking '3.5') must hit the int(value) ValueError branch in
+    _positive_int()'s _parse() and surface as a clean argparse usage error
+    (exit 2, 'must be an integer' in stderr), never an uncaught traceback.
+    This exercises cli.py's _parse() ValueError->ArgumentTypeError path
+    (lines 26-27), which every prior test skipped by only ever supplying
+    valid-looking or non-positive-but-still-integer strings."""
+    with pytest.raises(SystemExit) as exc:
+        main(["--demo", "clean", flag, value])
+    assert exc.value.code == 2
+    err = capsys.readouterr().err
+    assert "must be an integer" in err
+    assert "Traceback" not in err
+
+
+def test_epsilon_sweep_text_output(capsys):
+    """--epsilon-sweep without --json must render the human-readable
+    'Epsilon-sweep discriminator' section (cli.py main()'s text-output
+    branch, lines 136-141), not just the --json branch that every prior
+    epsilon-sweep test exercised."""
+    rc = main(["--demo", "buggy", "--epsilon-sweep", "--no-color"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "Epsilon-sweep discriminator" in out
+    assert "slope=" in out
+    assert "eps=" in out
+    assert "max_abs_diff_prefix=" in out

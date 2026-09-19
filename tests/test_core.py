@@ -228,3 +228,23 @@ class TestEpsilonSweep:
         sweep = epsilon_sweep(build, x, epsilons=[1e-3, 1e-2, 1e-1, 1.0], probe_layer_index=0, threshold=1e-15)
         # constant output regardless of epsilon -> diff is ~0 for the prefix in all cases (no leak at all)
         assert sweep["verdict"] in ("likely_numerical_floor", "inconclusive_too_few_nonzero_points")
+
+    def test_out_of_range_probe_layer_index_defaults_diff_to_zero(self):
+        """probe_layer_index >= len(result.layers) must fall through to the
+        diff = 0.0 else-branch (core.py line 234), not IndexError. This
+        happens for real when a caller passes a stale/max first_leak_index
+        from a differently-shaped audit result (e.g. cli.py's
+        `probe_index = result.first_leak_index if ... else 0` computed
+        against one model, then reused after a config change that shrinks
+        the layer count)."""
+        rng = np.random.default_rng(6)
+        x = rng.standard_normal((6, 3))
+
+        def build():
+            return _leaky_layer_at(0, n=1)
+
+        # This reference model has exactly 1 layer (index 0 valid, index 5
+        # is out of range) -- forces every point through the else-branch.
+        sweep = epsilon_sweep(build, x, epsilons=[1e-3, 1e-2, 1e-1, 1.0], probe_layer_index=5, threshold=1e-12)
+        assert all(diff == 0.0 for _eps, diff in sweep["points"])
+        assert sweep["verdict"] == "inconclusive_too_few_nonzero_points"
