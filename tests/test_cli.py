@@ -79,3 +79,28 @@ def test_custom_seq_len_and_chunk_size(capsys):
     assert rc == 0
     payload = json.loads(capsys.readouterr().out)
     assert payload["verdict"] == "leak_detected"
+
+
+@pytest.mark.parametrize("chunk_size", ["0", "-1", "-5"])
+def test_nonpositive_chunk_size_is_clean_cli_error_not_crash(capsys, chunk_size):
+    """--chunk-size <= 0 must produce a clean argparse usage error (exit 2),
+    never an unhandled ValueError/IndexError traceback from reference.py's
+    range()/list-indexing internals leaking past the CLI boundary."""
+    with pytest.raises(SystemExit) as exc:
+        main(["--demo", "clean", "--chunk-size", chunk_size])
+    assert exc.value.code == 2
+    err = capsys.readouterr().err
+    assert "chunk-size" in err
+    assert "Traceback" not in err
+
+
+@pytest.mark.parametrize("seq_len", ["0", "-1"])
+def test_nonpositive_seq_len_is_clean_cli_error_not_crash(capsys, seq_len):
+    """--seq-len <= 0 must produce a clean argparse usage error (exit 2),
+    never an unhandled IndexError from indexing an empty/negative array."""
+    with pytest.raises(SystemExit) as exc:
+        main(["--demo", "clean", "--seq-len", seq_len])
+    assert exc.value.code == 2
+    err = capsys.readouterr().err
+    assert "seq-len" in err
+    assert "Traceback" not in err

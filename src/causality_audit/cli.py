@@ -13,6 +13,25 @@ from .reference import build_reference_model
 from .style import print_fields, resolve_style, section, status_headline
 
 
+def _positive_int(flag_name: str):
+    """argparse `type=` factory: parse a base-10 int and reject values < 1
+    with a clean usage error, so --seq-len/--chunk-size 0 or negative fail
+    at argument-parsing time (exit code 2, no traceback) instead of
+    crashing deep inside numpy/reference.py with an IndexError or
+    ValueError once the demo actually runs."""
+
+    def _parse(value: str) -> int:
+        try:
+            parsed = int(value)
+        except ValueError:
+            raise argparse.ArgumentTypeError(f"--{flag_name} must be an integer, got {value!r}")
+        if parsed < 1:
+            raise argparse.ArgumentTypeError(f"--{flag_name} must be >= 1, got {parsed}")
+        return parsed
+
+    return _parse
+
+
 def _build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="causality-audit",
@@ -35,8 +54,18 @@ def _build_parser() -> argparse.ArgumentParser:
         default=None,
         help="run the built-in synthetic reference model (clean or buggy chunked-scan) and audit it",
     )
-    p.add_argument("--seq-len", type=int, default=12, help="sequence length for --demo (default 12)")
-    p.add_argument("--chunk-size", type=int, default=4, help="chunk size for --demo (default 4)")
+    p.add_argument(
+        "--seq-len",
+        type=_positive_int("seq-len"),
+        default=12,
+        help="sequence length for --demo (default 12, must be >= 1)",
+    )
+    p.add_argument(
+        "--chunk-size",
+        type=_positive_int("chunk-size"),
+        default=4,
+        help="chunk size for --demo (default 4, must be >= 1)",
+    )
     p.add_argument("--seed", type=int, default=0, help="random seed for --demo (default 0)")
     p.add_argument(
         "--epsilon-sweep",
