@@ -53,4 +53,4 @@ print(result.verdict, result.first_leak_index)
 pytest -v --cov=causality_audit
 ```
 
-[测试目录](tests)覆盖输入前提、泄漏定位、合成对照及 CLI 行为。[MIT 许可证](LICENSE)。
+[测试目录](tests)覆盖输入前提、泄漏定位、合成对照及 CLI 行为；版本历史见 [CHANGELOG.md](CHANGELOG.md)。[MIT 许可证](LICENSE)。

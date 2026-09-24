@@ -54,4 +54,4 @@ Background: [prefix-invariance paper](https://arxiv.org/abs/2608.22876) and [Tra
 pytest -v --cov=causality_audit
 ```
 
-See [tests](tests) for preconditions, localization, synthetic controls, and CLI behavior. [MIT license](LICENSE).
+See [tests](tests) for preconditions, localization, synthetic controls, and CLI behavior. Release history lives in [CHANGELOG.md](CHANGELOG.md). [MIT license](LICENSE).
