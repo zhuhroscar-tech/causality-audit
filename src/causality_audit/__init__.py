@@ -27,4 +27,4 @@ project has not audited any real HuggingFace checkpoint; that requires
 torch+transformers and is documented as a manual, non-CI workflow.
 """
 
-__version__ = "0.2.4"
+__version__ = "0.2.5"

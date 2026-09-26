@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.2.5 — Package resource links and release-tag CI
+
+- Added package metadata links for the issue tracker and changelog alongside the homepage.
+- Made release-tag CI coverage explicit for `v*` tags.
+- Added repository-contract checks so package resource links and release-tag CI wiring stay in sync.
+
 ## v0.2.4 — Repository completeness contracts
 
 - Added release-history documentation and repository-contract tests so packaging, CI, changelog, and release artifact expectations stay explicit.

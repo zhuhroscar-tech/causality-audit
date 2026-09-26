@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "causality-audit"
-version = "0.2.4"
+version = "0.2.5"
 description = "Two-forward-pass prefix-invariance (causal-leakage) audit for sequence-model layers, with a synthetic chunked-scan oracle reproducing the Zamba2/Nemotron-H bug class"
 readme = "README.md"
 license = "MIT"
@@ -24,6 +24,8 @@ classifiers = [
 
 [project.urls]
 Homepage = "https://github.com/zhuhroscar-tech/causality-audit"
+Issues = "https://github.com/zhuhroscar-tech/causality-audit/issues"
+Changelog = "https://github.com/zhuhroscar-tech/causality-audit/blob/main/CHANGELOG.md"
 
 [project.scripts]
 causality-audit = "causality_audit.cli:main"

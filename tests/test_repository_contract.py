@@ -4,7 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-CURRENT_VERSION = "0.2.4"
+CURRENT_VERSION = "0.2.5"
 
 
 def _read(relative: str) -> str:
@@ -34,7 +34,7 @@ def test_readmes_link_license_and_release_history() -> None:
 def test_changelog_documents_current_release() -> None:
     changelog = _read("CHANGELOG.md")
     assert f"## v{CURRENT_VERSION}" in changelog
-    assert "Repository completeness contracts" in changelog
+    assert "Package resource links" in changelog
 
 
 def test_version_is_consistent_across_package_metadata() -> None:
@@ -52,6 +52,18 @@ def test_ci_runs_tests_builds_artifacts_and_smokes_console_script() -> None:
     assert "causality-audit --version" in ci
     assert "causality-audit --demo buggy --json" in ci
     assert "SHA256SUMS.txt" in ci
+
+
+def test_ci_runs_on_release_tags() -> None:
+    ci = _read(".github/workflows/ci.yml")
+    assert "tags:" in ci
+    assert "v*" in ci
+
+
+def test_package_metadata_links_project_resources() -> None:
+    pyproject = _read("pyproject.toml")
+    for label in ["Homepage", "Issues", "Changelog"]:
+        assert f"{label} = " in pyproject
 
 
 def test_codeql_workflow_is_enabled_for_python() -> None:
